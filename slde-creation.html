@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <title>Webスライドエディタ</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <style>
+    body { margin:0; font-family: 'Noto Sans JP', sans-serif; }
+    .toolbar {
+      background:#333; color:#fff; padding:8px;
+      display:flex; align-items:center; gap:8px;
+    }
+    .toolbar button, .toolbar select {
+      padding:5px 10px; border:none; border-radius:5px;
+    }
+    .container { display:flex; height:calc(100vh - 40px); }
+    .sidebar {
+      width:200px; background:#f0f0f0; border-right:1px solid #ccc;
+      overflow-y:auto; padding:5px;
+    }
+    .thumb {
+      border:1px solid #999; margin:5px 0; padding:5px; cursor:pointer;
+      text-align:center; background:#fff;
+    }
+    .thumb.active { border:2px solid #007bff; }
+    .editor {
+      flex:1; display:flex; align-items:center; justify-content:center;
+      background:#fafafa; position:relative;
+    }
+    .slide {
+      width:80%; height:70%; border-radius:15px;
+      box-shadow:0 4px 12px rgba(0,0,0,0.2);
+      background:#fff; position:relative; overflow:hidden;
+    }
+    .slide-content {
+      position:absolute; top:50%; left:50%; transform:translate(-50%,-50%);
+      font-size:24px; text-align:center; padding:10px;
+    }
+    .theme-dark { background:#222; color:#fff; }
+    .theme-light { background:#fff; color:#000; }
+    .theme-gradient { background:linear-gradient(135deg,#74ebd5,#9face6); color:#fff; }
+    .slideshow {
+      position:fixed; top:0; left:0; right:0; bottom:0;
+      background:#000; display:none; justify-content:center; align-items:center;
+    }
+    .slideshow .slide {
+      width:90%; height:90%;
+    }
+  </style>
+</head>
+<body>
+  <div class="toolbar">
+    <button onclick="addSlide()">＋スライド</button>
+    <button onclick="deleteSlide()">－削除</button>
+    <button onclick="prevSlide()">◀</button>
+    <button onclick="nextSlide()">▶</button>
+    <select id="themeSelect" onchange="changeTheme(this.value)">
+      <option value="theme-light">ライト</option>
+      <option value="theme-dark">ダーク</option>
+      <option value="theme-gradient">グラデーション</option>
+    </select>
+    <button onclick="startSlideshow()">▶スライドショー</button>
+  </div>
+
+  <div class="container">
+    <div class="sidebar" id="sidebar"></div>
+    <div class="editor">
+      <div class="slide theme-light" id="mainSlide">
+        <div class="slide-content" id="slideText" contenteditable="true">新しいスライド</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="slideshow" id="slideshow">
+    <div class="slide theme-light">
+      <div class="slide-content" id="showText"></div>
+    </div>
+  </div>
+
+  <script>
+    let slides = [];
+    let currentIndex = -1;
+
+    function addSlide() {
+      slides.push({ text:"新しいスライド", theme:"theme-light" });
+      renderSidebar();
+      showSlide(slides.length - 1);
+    }
+
+    function deleteSlide() {
+      if (currentIndex >= 0) {
+        slides.splice(currentIndex,1);
+        renderSidebar();
+        showSlide(Math.max(0,currentIndex-1));
+      }
+    }
+
+    function renderSidebar() {
+      const sb = document.getElementById("sidebar");
+      sb.innerHTML = "";
+      slides.forEach((s,i)=>{
+        const div = document.createElement("div");
+        div.className = "thumb"+(i===currentIndex?" active":"");
+        div.innerText = s.text.slice(0,10);
+        div.onclick=()=>showSlide(i);
+        sb.appendChild(div);
+      });
+    }
+
+    function showSlide(index) {
+      if (index<0||index>=slides.length) return;
+      currentIndex = index;
+      const s = slides[index];
+      document.getElementById("slideText").innerText = s.text;
+      const main = document.getElementById("mainSlide");
+      main.className = "slide "+s.theme;
+      renderSidebar();
+    }
+
+    document.getElementById("slideText").addEventListener("input",()=>{
+      if (currentIndex>=0) {
+        slides[currentIndex].text = document.getElementById("slideText").innerText;
+        renderSidebar();
+      }
+    });
+
+    function changeTheme(theme) {
+      if (currentIndex>=0) {
+        slides[currentIndex].theme=theme;
+        showSlide(currentIndex);
+      }
+    }
+
+    function prevSlide(){ showSlide(currentIndex-1); }
+    function nextSlide(){ showSlide(currentIndex+1); }
+
+    function startSlideshow(){
+      if (slides.length===0) return;
+      let i=0;
+      const ss=document.getElementById("slideshow");
+      ss.style.display="flex";
+      const showText=document.getElementById("showText");
+      const slide=ss.querySelector(".slide");
+      function render(){
+        showText.innerText=slides[i].text;
+        slide.className="slide "+slides[i].theme;
+      }
+      render();
+      document.onkeydown=function(e){
+        if (e.key==="ArrowRight"){ i=Math.min(slides.length-1,i+1); render();}
+        if (e.key==="ArrowLeft"){ i=Math.max(0,i-1); render();}
+        if (e.key==="Escape"){ ss.style.display="none"; document.onkeydown=null; }
+      }
+    }
+  </script>
+</body>
+</html>
